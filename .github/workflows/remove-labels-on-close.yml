@@ -9,9 +9,11 @@ jobs:
   remove_labels:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v6
+      - uses: actions-ecosystem/action-remove-labels@v1
         with:
-          script: |
-            const script = require('./.github/workflows/scripts/removeLabelsOnClose.js')
-            console.log(script({ github, context }))
+          labels: |
+            codeReview
+            maturation
+            review
+            waitingForDev
 
