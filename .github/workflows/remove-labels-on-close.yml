@@ -12,9 +12,21 @@ jobs:
       - uses: actions/github-script@v6
         with:
           script: |
-            github.rest.issues.removeLabel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              name: "codeReview"
-            })
+            const USELESS_LABELS_WHEN_ISSUE_IS_CLOSED = [
+              "codeReview",
+              "maturation",
+              "review",
+              "waitingForDev"
+            ];
+
+            for (const uselessLabel of USELESS_LABELS_WHEN_ISSUE_IS_CLOSED) {
+              if(context.payload.issue.labels.some(({ name }) => name === uselessLabel)) { continue; }
+
+              github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.number,
+                name: uselessLabel
+              })
+            }
+
