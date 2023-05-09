@@ -1,0 +1,27 @@
+name: When issue is labeled with `s:random`, replace it by a random squad label
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  assign-squad:
+    if: github.event.label.name == 's:random'
+    runs-on: k8s-runner
+    steps:
+
+      - uses: Bhacaz/checkout-files@v2
+        with:
+          files: .github/360lConfig.yml
+      - uses: sergeysova/jq-action@v2
+        id: selectSquadLabel
+        with:
+          # replace each squad item by $size times its label => shuffle and take the first one
+          cmd: jq '.squads | map(. as $squad | range($squad.size) | $squad.label) | .[]' .github/360lConfig.json | shuf -n 1
+      - uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: s:random
+      - uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: ${{ steps.selectSquadLabel.outputs.value }}"
