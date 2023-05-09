@@ -15,7 +15,8 @@ jobs:
         id: selectSquadLabel
         with:
           # replace each squad item by $size times its label => shuffle and take the first one
-          cmd: jq '.squads | map(. as $squad | range($squad.size) | $squad.label) | .[]' .github/360lConfig.json | shuf -n 1
+          # -r options is for raw output and remove extra quotes on strings
+          cmd: jq -r '.squads | map(. as $squad | range($squad.size) | $squad.label) | .[]' .github/360lConfig.json | shuf -n 1
       - uses: actions-ecosystem/action-remove-labels@v1
         with:
           labels: s:random
