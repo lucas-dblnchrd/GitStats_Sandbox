@@ -10,10 +10,9 @@ jobs:
     if: github.event.label.name == 's:random'
     runs-on: ubuntu-latest
     steps:
-
       - uses: Bhacaz/checkout-files@v2
         with:
-          files: .github/360lConfig.yml
+          files: ".github/360lConfig.yml"
       - uses: sergeysova/jq-action@v2
         id: selectSquadLabel
         with:
