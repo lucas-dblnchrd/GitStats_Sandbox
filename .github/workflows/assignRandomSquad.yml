@@ -22,4 +22,4 @@ jobs:
           labels: s:random
       - uses: actions-ecosystem/action-add-labels@v1
         with:
-          labels: ${{ steps.selectSquadLabel.outputs.value }}"
+          labels: ${{ steps.selectSquadLabel.outputs.value }}
