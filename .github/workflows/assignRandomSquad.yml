@@ -8,7 +8,7 @@ on:
 jobs:
   assign-squad:
     if: github.event.label.name == 's:random'
-    runs-on: k8s-runner
+    runs-on: ubuntu-latest
     steps:
 
       - uses: Bhacaz/checkout-files@v2
