@@ -20,20 +20,25 @@ jobs:
           script: |
             const fs = require('fs');
 
-            fs.readFile('./.github/360lConfig.json', (err, data) => {
-              if (err) throw err;
-              const config = JSON.parse(data);
+            const data = await fs.readFile('./.github/360lConfig.json');
 
-              const squadConfig = config
-                .squads
-                .find(({ label }) => context.issue.labels.some(({ name }) => name === label));
+            const config = JSON.parse(data);
 
-              if (squadConfig === undefined) { return; }
+            const squadConfig = config
+              .squads
+              .find(({ label }) => context.issue.labels.some(({ name }) => name === label));
 
-              github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: "test" + squadConfig.github-name,
-              });
+            if (squadConfig === undefined) { return; }
+
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "test" + squadConfig.githubName,
             });
