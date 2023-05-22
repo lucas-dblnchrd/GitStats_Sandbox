@@ -20,7 +20,7 @@ jobs:
           script: |
             const fs = require('fs');
 
-            fs.readFile('./github/360lConfig.json', (err, data) => {
+            fs.readFile('./.github/360lConfig.json', (err, data) => {
               if (err) throw err;
               const config = JSON.parse(data);
 
