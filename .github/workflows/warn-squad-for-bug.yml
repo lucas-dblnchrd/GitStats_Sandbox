@@ -39,5 +39,5 @@ jobs:
               body: [
                 squadConfig.githubName,
                 "A bug with priotity ${context.payload.milestone.title} is assigned to your squad."
-              ]
+              ].join("\n")
             });
