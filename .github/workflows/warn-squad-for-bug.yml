@@ -20,21 +20,27 @@ jobs:
           script: |
             const fs = require('fs').promises;
 
+            // load 360lConfig.json
             const data = await fs.readFile('./.github/360lConfig.json');
-
             const config = JSON.parse(data);
+
+            console.log(context.payload)
+            console.log(context.issue)
+
+            // fetch issue, to retrieve all labels
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            
 
             const squadConfig = config
               .squads
               .find(({ label }) => context.issue.labels.some(({ name }) => name === label));
 
             if (squadConfig === undefined) { return; }
-
-            const issue = await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
