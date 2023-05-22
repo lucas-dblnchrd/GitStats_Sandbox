@@ -1,0 +1,79 @@
+{
+    "squads": [{
+        "label": "s:ai",
+        "size": 2
+    },{
+        "label": "s:archi",
+        "size": 6
+    },{
+        "label": "s:authoring",
+        "size": 3
+    },{
+        "label": "s:backoffice",
+        "size": 1
+    },{
+        "label": "s:billing",
+        "size": 1
+    },{
+        "label": "s:blended",
+        "size": 3
+    },{
+        "label": "s:campaigns",
+        "size": 4
+    },{
+        "label": "s:collaboration",
+        "size": 3
+    },{
+        "label": "s:dashboard",
+        "size": 4
+    },{
+        "label": "s:devops",
+        "size": 4
+    },{
+        "label": "s:dx-back",
+        "github-name": "@360Learning/developer-experience",
+        "size": 3
+    },{
+        "label": "s:dx-front",
+        "size": 2
+    },{
+        "label": "s:engage",
+        "size": 3
+    },{
+        "label": "s:enterprise",
+        "size": 2
+    },{
+        "label": "s:experience",
+        "size": 4
+    },{
+        "label": "s:integrations",
+        "size": 6
+    },{
+        "label": "s:looop",
+        "size": 4
+    },{
+        "label": "s:m&a",
+        "size": 1
+    },{
+        "label": "s:onboarding",
+        "size": 1
+    },{
+        "label": "s:open360",
+        "size": 5
+    },{
+        "label": "s:paths",
+        "size": 5
+    },{
+        "label": "s:salesEnablement",
+        "size": 1
+    },{
+        "label": "s:security",
+        "size": 3
+    },{
+        "label": "s:stickiness",
+        "size": 3
+    },{
+        "label": "s:use-cases",
+        "size": 2
+    }]
+}

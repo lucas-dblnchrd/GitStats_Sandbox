@@ -1,0 +1,39 @@
+name: When bug is labeled with `bug`, ping squad if needed
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  assign-random-squad:
+    # example: https://docs.github.com/en/actions/learn-github-actions/expressions#example-using-an-object-filter
+    # example: https://docs.github.com/en/actions/learn-github-actions/expressions#example-matching-an-array-of-strings
+    if: | 
+        contains(github.event.issue.labels.*.name, 'bug') && 
+        contains(fromJSON('["Bugs - P0", "Bugs - P1"]'), github.event.issue.milestone.title)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+
+            fs.readFile('./github/360lConfig.json', (err, data) => {
+              if (err) throw err;
+              const config = JSON.parse(data);
+
+              const squadConfig = config
+                .squads
+                .find(({ label }) => context.issue.labels.some(({ name }) => name === label));
+
+              if (squadConfig === undefined) { return; }
+
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: "test" + squadConfig.github-name,
+              });
+            });
