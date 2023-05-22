@@ -38,6 +38,6 @@ jobs:
               issue_number: context.issue.number,
               body: [
                 squadConfig.githubName,
-                "A bug with priotity ${context.payload.milestone.title} is assigned to your squad."
+                `A bug with priority ${context.payload.milestone.title} is assigned to your squad.`
               ].join("\n")
             });
