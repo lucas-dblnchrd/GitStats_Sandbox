@@ -36,5 +36,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: "test " + squadConfig.githubName,
+              body: [
+                squadGithubName,
+                "A bug with priotity ${context.payload.milestone.title} is assigned to your squad."
+              ]
             });
