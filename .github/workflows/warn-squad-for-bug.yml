@@ -18,7 +18,7 @@ jobs:
       - uses: actions/github-script@v6
         with:
           script: |
-            const fs = require('fs');
+            const fs = require('fs').promises;
 
             const data = await fs.readFile('./.github/360lConfig.json');
 
