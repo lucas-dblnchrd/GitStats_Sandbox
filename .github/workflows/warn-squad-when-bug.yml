@@ -47,6 +47,8 @@ jobs:
               .squads
               .find(({ label }) => context.payload.issue.labels.some(({ name }) => name === label));
 
+            console.log("squadConfig: " + squadConfig)
+
             return squadConfig;
       - uses: actions-ecosystem/action-create-comment@v1
         if: |
