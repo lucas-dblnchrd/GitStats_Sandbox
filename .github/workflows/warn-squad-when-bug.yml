@@ -29,7 +29,7 @@ jobs:
     if: | 
         github.event.issue.state == 'open' && 
         contains(fromJSON('["Bugs - P0", "Bugs - P1"]'), github.event.issue.milestone.title)
-    runs-on: k8s-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/github-script@v6
