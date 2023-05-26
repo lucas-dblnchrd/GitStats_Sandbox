@@ -49,14 +49,11 @@ jobs:
 
             return squadConfig;
       - uses: actions-ecosystem/action-create-comment@v1
-        # if: |
-        #   steps.fetch-squad-config.outputs.result != null &&
-        #   steps.fetch-squad-config.outputs.result.githubName != null &&
-        #   github.event.label.name != steps.fetch-squad-config.outputs.result.label
+        if: fromJSON(steps.fetch-squad-config.outputs.result).githubName
         with:
           github_token: ${{ secrets.github_token }}
           body: |
-            ${{ steps.fetch-squad-config.outputs.result.githubName }}
+            ${{ fromJSON(steps.fetch-squad-config.outputs.result).githubName }}
             A bug with priority *${context.payload.issue.milestone.title}* is assigned to your squad.
             Debug:
             ${{ steps.fetch-squad-config.outputs.result }}
