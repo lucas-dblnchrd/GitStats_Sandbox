@@ -32,19 +32,19 @@ jobs:
 
       - run: |
           gh pr create \
-          --head gitflow/${{ github.ref_name }}-${{ github.sha }}
-          --base ${{ github.ref_name == 'prod' && 'beta' || 'dev' }}
-          --title "chore(gitflow): Merge ${{ github.ref_name }}'s commit ${{ github.sha }}" 
-          --body ":warning: This PR has been automatically created."
-          --assignee "@me"
-          --reviewer ${{ github.event.pusher.username }}
+          --head gitflow/${{ github.ref_name }}-${{ github.sha }} \
+          --base ${{ github.ref_name == 'prod' && 'beta' || 'dev' }} \
+          --title "chore(gitflow): Merge ${{ github.ref_name }}'s commit ${{ github.sha }}" \
+          --body ":warning: This PR has been automatically created." \
+          --assignee "@me" \
+          --reviewer ${{ github.event.pusher.username }} \
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - run: |
           gh pr merge \
-          --auto
-          --merge
-          --delete-branch
+          --auto \
+          --merge \
+          --delete-branch \
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
