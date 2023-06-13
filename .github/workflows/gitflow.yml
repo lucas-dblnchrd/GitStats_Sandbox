@@ -28,7 +28,7 @@ jobs:
         run: git checkout -b gitflow/${{ github.ref_name }}-${{ github.sha }}
 
       - name: Push branch
-        run: git push
+        run: git push origin gitflow/${{ github.ref_name }}-${{ github.sha }}
 
       - run: |
           gh pr create \
