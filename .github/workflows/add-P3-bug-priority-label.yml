@@ -9,7 +9,7 @@ jobs:
   add-P3-bug-priority-label:
     if: |
         github.event.issue.milestone.title == 'Bugs - P3'
-    runs-on: k8s-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions-ecosystem/action-add-labels@v1
         with:
