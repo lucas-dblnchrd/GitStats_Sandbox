@@ -1,0 +1,85 @@
+# This GitHub Action notifies squads on Issues if a P0 or P1 is assigned to them.
+# It uses the config in `.github/360lConfig.json` to match the squad `label` with a squad `githubName` & `slackChannel`.
+#
+#
+# This action triggers when:
+# - an Issue is labeled
+# - this Issue is open
+# - this Issue has one of the following labels:
+#   - "bug-P0"
+#   - "bug-P1"
+# - this Issue has a squad label matching the config
+# - the added label is one of the following labels:
+#   - "bug-P0"
+#   - "bug-P1"
+#   - a squad label
+#
+# This action's steps are:
+# - read the content of `.github/360lConfig.json`
+# - find the squad's config based on the squad label of the Issue
+# - if the config has a `githubName` for the squad, then write a comment on the Issue with a ping for the squad's GitHub name
+# - if the config has a `slackChannel` for the squad, then write a message in their slack channel
+
+
+name: Warn squads for P0s and P1s on Issues and Slack
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  warn-squad-when-bug:
+    if: |
+      github.event.issue.state == 'open' && (
+        contains(github.event.issue.labels.*.name, 'bug-P0') ||
+        contains(github.event.issue.labels.*.name, 'bug-P1')
+      )
+    runs-on: k8s-runner
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/github-script@v6
+        id: fetch-squad-config
+        with:
+          script: |
+            const fs = require('fs').promises;
+
+            // load 360lConfig.json
+            const data = await fs.readFile('./.github/360lConfig.json');
+            const config = JSON.parse(data);
+
+            // find squad config matching issue labels
+            const squadConfig = config
+              .squads
+              .find(({ label }) => context.payload.issue.labels.some(({ name }) => name === label));
+
+            console.log("squadConfig: " + JSON.stringify(squadConfig))
+
+            return squadConfig;
+      - id: check-event
+        if: |
+          steps.fetch-squad-config.outputs.result &&
+          (
+            github.event.label.name == fromJSON(steps.fetch-squad-config.outputs.result).label ||
+            contains(fromJSON('["bug-P0", "bug-P1"]'), github.event.label.name)
+          )
+        run: echo "result=1" >> "$GITHUB_OUTPUT"
+      - uses: actions-ecosystem/action-create-comment@v1
+        if: |
+          steps.check-event.outputs.result &&
+          fromJSON(steps.fetch-squad-config.outputs.result).githubName
+        with:
+          github_token: ${{ secrets.github_token }}
+          body: |
+            ${{ fromJSON(steps.fetch-squad-config.outputs.result).githubName }}
+            A bug with priority **${{ github.event.issue.milestone.title }}** is assigned to your squad.
+      - uses: slackapi/slack-github-action@v1.24.0
+        if: |
+          steps.check-event.outputs.result &&
+          fromJSON(steps.fetch-squad-config.outputs.result).slackChannel
+        with:
+          channel-id: ${{ fromJSON(steps.fetch-squad-config.outputs.result).slackChannel }}
+          slack-message: |
+            An issue is opened on `${{ github.event.issue.milestone.title }}`: <${{ github.event.issue.html_url }}>
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

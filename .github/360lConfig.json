@@ -1,0 +1,8 @@
+{
+    "squads": [{
+        "label": "s:dx-back",
+        "githubName": "@360Learning/developer-experience",
+        "size": 3,
+        "slackChannel": "dx"
+    }]
+}
