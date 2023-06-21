@@ -35,7 +35,7 @@ jobs:
         contains(github.event.issue.labels.*.name, 'bug-P0') ||
         contains(github.event.issue.labels.*.name, 'bug-P1')
       )
-    runs-on: k8s-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/github-script@v6
