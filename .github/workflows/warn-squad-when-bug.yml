@@ -39,6 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/github-script@v6
+        name: fetch squad config
         id: fetch-squad-config
         with:
           script: |
@@ -57,6 +58,7 @@ jobs:
 
             return squadConfig;
       - uses: actions/github-script@v6
+        name: check added label and fetch bug priority
         id: check-event
         if: |
           steps.fetch-squad-config.outputs.result &&
@@ -66,10 +68,8 @@ jobs:
           )
         with:
           script: |
-            console.log("Issue labels:", context.payload.issue.labels);
-            if (context.payload.issue.labels.some(({ name }) => name === "bug-P0")) { console.log("P0 !!!"); return "P0"; }
-            if (context.payload.issue.labels.some(({ name }) => name === "bug-P1")) { console.log("P0 !!!"); return "P1"; }
-            console.log("no prio found!?"); 
+            if (context.payload.issue.labels.some(({ name }) => name === "bug-P0")) { return "P0"; }
+            if (context.payload.issue.labels.some(({ name }) => name === "bug-P1")) { return "P1"; }
       - uses: actions-ecosystem/action-create-comment@v1
         if: |
           steps.check-event.outputs.result &&
