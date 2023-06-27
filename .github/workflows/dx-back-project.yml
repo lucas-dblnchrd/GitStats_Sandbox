@@ -1,0 +1,60 @@
+name: Add issues to dx-back project
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  add-issue-to-dx-back-project:
+    if: | 
+        github.event.issue.state == 'open' && 
+        contains(github.event.issue.labels.*.name, 'bug') && 
+        contains(github.event.issue.labels.*.name, 's:dx-back')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92
+        with:
+          app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
+          private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
+      - uses: actions/github-script@v6
+        name: Get project data
+        id: get_project_data
+        env:
+          ORGANIZATION: 360Learning
+          PROJECT_NUMBER: 42
+        with:
+          github-token: ${{ steps.generate_token.outputs.token }}
+          script: |
+            const query = `query($org: String!, $number: Int!) {
+              organization(login: $org){
+                projectV2(number: $number) {
+                  id
+                  statusField: field(name:"Status") {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      name
+                      options {
+                        id
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }`;
+            const variables = {
+              org: process.env.ORGANIZATION,
+              number: parseInt(process.env.PROJECT_NUMBER, 10)
+            };
+            return await github.graphql(query, variables);
+      - name: Print result
+        env:
+          GRAPHQL_RESULT: ${{ steps.get_project_data.outputs.result }}
+        run: |
+          echo GRAPHQL RESULT = $GRAPHQL_RESULT
+          echo EVENT NAME: $GITHUB_EVENT_NAME
+          echo EVENT PAYLOAD:
+          cat $GITHUB_EVENT_PATH
