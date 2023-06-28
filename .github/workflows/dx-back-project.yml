@@ -8,10 +8,8 @@ on:
 jobs:
   add-issue-to-dx-back-project:
     if: | 
-        github.event.issue.state == 'open' && 
-        contains(github.event.issue.labels.*.name, 'bug') && 
-        contains(github.event.issue.labels.*.name, 's:dx-back') &&
-        contains(fromJSON('["bug", "s:dx-back"]'), github.event.label.name)
+        github.event.issue.state == 'open' &&
+        github.event.label.name == 's:dx-back'
     runs-on: ubuntu-latest
     steps:
 
@@ -52,7 +50,7 @@ jobs:
               org: process.env.ORGANIZATION,
               number: parseInt(process.env.PROJECT_NUMBER, 10)
             };
-            return await github.graphql(query, variables);
+            return (await github.graphql(query, variables)).organization.projectV2;
 
       - name: Print result
         env:
@@ -77,7 +75,7 @@ jobs:
               addProjectV2ItemById(input: { projectId: $projectId, contentId: $issueId }) {
                 item {
                   id,
-                  fieldValueByName(name: "Status") {
+                  statusFieldValue: fieldValueByName(name: "Status") {
                     ... on ProjectV2ItemFieldSingleSelectValue {
                       name,
                       optionId
@@ -87,13 +85,58 @@ jobs:
               }
             }`;
             const variables = {
-              projectId: projectData.organization.projectV2.id,
+              projectId: projectData.id,
               issueId: issue.node_id
             };
-            return await github.graphql(query, variables);
+            return (await github.graphql(query, variables)).addProjectV2ItemById.item;
 
       - name: Print created item
         env:
           GRAPHQL_RESULT: ${{ steps.add_issue_to_project.outputs.result }}
         run: |
           echo GRAPHQL RESULT = $GRAPHQL_RESULT
+
+      - uses: actions/github-script@v6
+        name: Set issue status
+        if: fromJson(steps.add_issue_to_project.outputs.result).statusFieldValue == null
+        env:
+          PROJECT_DATA: ${{ steps.get_project_data.outputs.result }}
+          ISSUE_DATA: ${{ steps.add_issue_to_project.outputs.result }}
+        with:
+          github-token: ${{ steps.generate_token.outputs.token }}
+          script: |
+            const projectData = JSON.parse(process.env.PROJECT_DATA);
+            const issueData = JSON.parse(process.env.ISSUE_DATA);
+            const issue = context.payload.issue;
+            const expectedStatus = issue.labels.map(({ name }) => name).includes("bug") ? "Ready to dev" : "Inbox"
+            const expectedStatusId = projectData.statusField.options.find(({ name }) => name === expectedStatus)?.id;
+            console.log("EXPECTED STATUS: ", expectedStatus, "with id", expectedStatusId);
+            if (expectedStatusId) {
+              const query = `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { 
+                    singleSelectOptionId: $optionId
+                  }
+                }) {
+                  projectV2Item {
+                    id,
+                    statusFieldValue: fieldValueByName(name: "Status") {
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        name,
+                        optionId
+                      }
+                    }
+                  }
+                }
+              }`;
+              const variables = {
+                projectId: projectData.id,
+                itemId: issueData.id,
+                fieldId: projectData.statusField.id,
+                optionId: expectedStatusId
+              };
+              return await github.graphql(query, variables);
+            }
