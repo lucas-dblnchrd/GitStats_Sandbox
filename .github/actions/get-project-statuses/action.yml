@@ -4,10 +4,6 @@ inputs:
     description: The GitHub token used to create an authenticated client
     required: true
     default: ${{ github.token }}
-  organization:
-    description: Your organization name
-    required: true
-    default: 360Learning
   project-number:
     description: Number of your project. It's available in your project's URL
     required: true
@@ -31,15 +27,14 @@ outputs:
             ]
         }
       }
-    value: ${{ steps.get_project_data.outputs.result }}
+    value: ${{ steps.get-project-data.outputs.result }}
 runs:
   using: composite
   steps:
-    - uses: actions/github-script@v6
-      name: Get project data
-      id: get_project_data
+    - name: Get project data
+      id: get-project-data
+      uses: actions/github-script@v6
       env:
-        ORGANIZATION: ${{ inputs.organization }}
         PROJECT_NUMBER: ${{ inputs.project-number }}
       with:
         github-token: ${{ inputs.github-token }}
@@ -62,7 +57,7 @@ runs:
             }
           }`;
           const variables = {
-            org: process.env.ORGANIZATION,
+            org: context.payload.organization.login,
             number: parseInt(process.env.PROJECT_NUMBER, 10)
           };
           return (await github.graphql(query, variables)).organization.projectV2;
