@@ -15,84 +15,47 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Generate token
-        id: generate_token
+        id: generate-token
         uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92
         with:
           app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
           private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
 
       - name: Get project statuses
-        id: get_project_statuses
+        id: get-project-statuses
         uses: ./.github/actions/get-project-statuses
         with:
-          github-token: ${{ steps.generate_token.outputs.token }}
-          organization: 360Learning
+          github-token: ${{ steps.generate-token.outputs.token }}
           project-number: 42
 
-      - name: Print result
-        env:
-          GRAPHQL_RESULT: ${{ steps.get_project_statuses.outputs.result }}
-        run: |
-          echo GRAPHQL RESULT = $GRAPHQL_RESULT
-          echo EVENT NAME: $GITHUB_EVENT_NAME
-          echo EVENT PAYLOAD:
-          cat $GITHUB_EVENT_PATH
-
       - name: Add issue to project
-        id: add_issue_to_project
+        id: add-issue-to-project
         uses: ./.github/actions/add-issue-to-project
         with:
-          github-token: ${{ steps.generate_token.outputs.token }}
-          project-id: ${{ fromJSON(steps.get_project_statuses.outputs.result).id }}
+          github-token: ${{ steps.generate-token.outputs.token }}
+          project-id: ${{ fromJSON(steps.get-project-statuses.outputs.result).id }}
           issue-node-id: ${{ github.event.issue.node_id }}
 
-      - name: Print created item
+      - name: Compute issue status
+        id: compute-issue-status
+        uses: actions/github-script@v6
+        if: fromJson(steps.add-issue-to-project.outputs.result).statusFieldValue == null
         env:
-          GRAPHQL_RESULT: ${{ steps.add_issue_to_project.outputs.result }}
-        run: |
-          echo GRAPHQL RESULT = $GRAPHQL_RESULT
-
-      - uses: actions/github-script@v6
-        name: Set issue status
-        if: fromJson(steps.add_issue_to_project.outputs.result).statusFieldValue == null
-        env:
-          PROJECT_DATA: ${{ steps.get_project_statuses.outputs.result }}
-          ISSUE_DATA: ${{ steps.add_issue_to_project.outputs.result }}
+          PROJECT_DATA: ${{ steps.get-project-statuses.outputs.result }}
+          ISSUE_DATA: ${{ steps.add-issue-to-project.outputs.result }}
         with:
-          github-token: ${{ steps.generate_token.outputs.token }}
           script: |
             const projectData = JSON.parse(process.env.PROJECT_DATA);
-            const issueData = JSON.parse(process.env.ISSUE_DATA);
-            const issue = context.payload.issue;
-            const expectedStatus = issue.labels.map(({ name }) => name).includes("bug") ? "Ready to dev" : "Inbox"
+            const expectedStatus = context.payload.issue.labels.map(({ name }) => name).includes("bug") ? "Ready to dev" : "Inbox"
             const expectedStatusId = projectData.statusField.options.find(({ name }) => name === expectedStatus)?.id;
-            console.log("EXPECTED STATUS: ", expectedStatus, "with id", expectedStatusId);
-            if (expectedStatusId) {
-              const query = `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-                updateProjectV2ItemFieldValue(input: {
-                  projectId: $projectId,
-                  itemId: $itemId,
-                  fieldId: $fieldId,
-                  value: { 
-                    singleSelectOptionId: $optionId
-                  }
-                }) {
-                  projectV2Item {
-                    id,
-                    statusFieldValue: fieldValueByName(name: "Status") {
-                      ... on ProjectV2ItemFieldSingleSelectValue {
-                        name,
-                        optionId
-                      }
-                    }
-                  }
-                }
-              }`;
-              const variables = {
-                projectId: projectData.id,
-                itemId: issueData.id,
-                fieldId: projectData.statusField.id,
-                optionId: expectedStatusId
-              };
-              return await github.graphql(query, variables);
-            }
+            return expectedStatusId;
+
+      - name: Set issue status
+        uses: ./.github/actions/set-issue-status-in-project
+        if: steps.compute-issue-status.outputs.result
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          project-id: ${{ fromJSON(steps.get-project-statuses.outputs.result).id }}
+          item-id: ${{ fromJSON(steps.add-issue-to-project.outputs.result).id }}
+          field-id: ${{ fromJSON(steps.get-project-statuses.outputs.result).statusField.id }}
+          option-id: ${{ fromJSON(steps.compute-issue-status.outputs.result) }}
