@@ -1,0 +1,68 @@
+name: Fetch project status values
+inputs:
+  github-token:
+    description: The GitHub token used to create an authenticated client
+    required: true
+    default: ${{ github.token }}
+  organization:
+    description: Your organization name
+    required: true
+    default: 360Learning
+  project-number:
+    description: Number of your project. It's available in your project's URL
+    required: true
+outputs:
+  result:
+    description: |
+      The project description, with possible status values
+      It's a JSON document of the form:
+      {
+        "id": "<project ID>",
+        "statusField": {
+            "id": "<field ID>",
+            "name": "Status",
+            "options": [
+                { "id": "<option ID 1>", "name": "Inbox" },
+                { "id": "<option ID 2>", "name": "Backlog" },
+                { "id": "<option ID 3>", "name": "To Refine" },
+                { "id": "<option ID 4>", "name": "Ready to dev" },
+                { "id": "<option ID 5>", "name": "In Progress" },
+                { "id": "<option ID 6>", "name": "Done "}
+            ]
+        }
+      }
+    value: ${{ steps.get_project_data.outputs.result }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v6
+      name: Get project data
+      id: get_project_data
+      env:
+        ORGANIZATION: ${{ inputs.organization }}
+        PROJECT_NUMBER: ${{ inputs.project-number }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const query = `query($org: String!, $number: Int!) {
+            organization(login: $org){
+              projectV2(number: $number) {
+                id
+                statusField: field(name:"Status") {
+                  ... on ProjectV2SingleSelectField {
+                    id
+                    name
+                    options {
+                      id
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }`;
+          const variables = {
+            org: process.env.ORGANIZATION,
+            number: parseInt(process.env.PROJECT_NUMBER, 10)
+          };
+          return (await github.graphql(query, variables)).organization.projectV2;

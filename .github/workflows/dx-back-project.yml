@@ -12,6 +12,7 @@ jobs:
         github.event.label.name == 's:dx-back'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
 
       - name: Generate token
         id: generate_token
@@ -20,41 +21,17 @@ jobs:
           app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
           private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
 
-      - uses: actions/github-script@v6
-        name: Get project data
-        id: get_project_data
-        env:
-          ORGANIZATION: 360Learning
-          PROJECT_NUMBER: 42
+      - name: Get project statuses
+        id: get_project_statuses
+        uses: ./.github/actions/get-project-statuses
         with:
           github-token: ${{ steps.generate_token.outputs.token }}
-          script: |
-            const query = `query($org: String!, $number: Int!) {
-              organization(login: $org){
-                projectV2(number: $number) {
-                  id
-                  statusField: field(name:"Status") {
-                    ... on ProjectV2SingleSelectField {
-                      id
-                      name
-                      options {
-                        id
-                        name
-                      }
-                    }
-                  }
-                }
-              }
-            }`;
-            const variables = {
-              org: process.env.ORGANIZATION,
-              number: parseInt(process.env.PROJECT_NUMBER, 10)
-            };
-            return (await github.graphql(query, variables)).organization.projectV2;
+          organization: 360Learning
+          project-number: 42
 
       - name: Print result
         env:
-          GRAPHQL_RESULT: ${{ steps.get_project_data.outputs.result }}
+          GRAPHQL_RESULT: ${{ steps.get_project_statuses.outputs.result }}
         run: |
           echo GRAPHQL RESULT = $GRAPHQL_RESULT
           echo EVENT NAME: $GITHUB_EVENT_NAME
@@ -65,7 +42,7 @@ jobs:
         name: Add issue to project
         id: add_issue_to_project
         env:
-          PROJECT_DATA: ${{ steps.get_project_data.outputs.result }}
+          PROJECT_DATA: ${{ steps.get_project_statuses.outputs.result }}
         with:
           github-token: ${{ steps.generate_token.outputs.token }}
           script: |
@@ -100,7 +77,7 @@ jobs:
         name: Set issue status
         if: fromJson(steps.add_issue_to_project.outputs.result).statusFieldValue == null
         env:
-          PROJECT_DATA: ${{ steps.get_project_data.outputs.result }}
+          PROJECT_DATA: ${{ steps.get_project_statuses.outputs.result }}
           ISSUE_DATA: ${{ steps.add_issue_to_project.outputs.result }}
         with:
           github-token: ${{ steps.generate_token.outputs.token }}
