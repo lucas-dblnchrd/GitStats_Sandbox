@@ -5,6 +5,9 @@ on:
     types:
       - labeled
 
+env:
+  DX_BACK_PROJECT_NUMBER: 42
+
 jobs:
   add-issue-to-dx-back-project:
     if: | 
@@ -26,7 +29,7 @@ jobs:
         uses: ./.github/reusable-actions/get-project-statuses
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
-          project-number: 42
+          project-number: ${{ env.DX_BACK_PROJECT_NUMBER }}
 
       - name: Add issue to project
         id: add-issue-to-project
