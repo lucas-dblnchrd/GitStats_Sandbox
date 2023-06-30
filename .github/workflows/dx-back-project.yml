@@ -23,14 +23,14 @@ jobs:
 
       - name: Get project statuses
         id: get-project-statuses
-        uses: ./.github/actions/get-project-statuses
+        uses: ./.github/reusable-actions/get-project-statuses
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           project-number: 42
 
       - name: Add issue to project
         id: add-issue-to-project
-        uses: ./.github/actions/add-issue-to-project
+        uses: ./.github/reusable-actions/add-issue-to-project
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
           project-id: ${{ fromJSON(steps.get-project-statuses.outputs.result).id }}
@@ -51,7 +51,7 @@ jobs:
             return expectedStatusId;
 
       - name: Set issue status
-        uses: ./.github/actions/set-issue-status-in-project
+        uses: ./.github/reusable-actions/set-issue-status-in-project
         if: steps.compute-issue-status.outputs.result
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
