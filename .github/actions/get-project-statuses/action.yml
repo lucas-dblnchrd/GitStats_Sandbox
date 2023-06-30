@@ -27,19 +27,18 @@ outputs:
             ]
         }
       }
-    value: ${{ steps.get-project-data.outputs.result }}
+    value: ${{ toJSON(fromJSON(steps.get-project-data.outputs.data).organization.projectV2) }}
 runs:
   using: composite
   steps:
     - name: Get project data
       id: get-project-data
-      uses: actions/github-script@v6
+      uses: octokit/graphql-action@v2.x
       env:
-        PROJECT_NUMBER: ${{ inputs.project-number }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const query = `query($org: String!, $number: Int!) {
+        query: |
+          query($org: String!, $number: Int!) {
             organization(login: $org){
               projectV2(number: $number) {
                 id
@@ -55,9 +54,7 @@ runs:
                 }
               }
             }
-          }`;
-          const variables = {
-            org: context.payload.organization.login,
-            number: parseInt(process.env.PROJECT_NUMBER, 10)
-          };
-          return (await github.graphql(query, variables)).organization.projectV2;
+          }
+        variables: |
+          org: ${{ github.event.organization.login }}
+          number: ${{ inputs.project-number }}

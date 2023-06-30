@@ -23,21 +23,19 @@ outputs:
         }
       }
       If the item is new, statusFieldValue == null
-    value: ${{ steps.add-issue-to-project.outputs.result }}
+    value: ${{ toJSON(fromJSON(steps.add-issue-to-project.outputs.data).addProjectV2ItemById.item) }}
 runs:
   using: composite
   steps:
     - name: Add issue to project
       id: add-issue-to-project
-      uses: actions/github-script@v6
+      uses: octokit/graphql-action@v2.x
       env:
-        PROJECT_ID: ${{ inputs.project-id }}
-        ISSUE_NODE_ID: ${{ inputs.issue-node-id }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const query = `mutation($projectId: ID!, $issueId: ID!) {
-            addProjectV2ItemById(input: { projectId: $projectId, contentId: $issueId }) {
+        query: |
+          mutation($projectId: ID!, $contentId: ID!) {
+            addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
               item {
                 id,
                 statusFieldValue: fieldValueByName(name: "Status") {
@@ -48,9 +46,7 @@ runs:
                 }
               }
             }
-          }`;
-          const variables = {
-            projectId: process.env.PROJECT_ID,
-            issueId: process.env.ISSUE_NODE_ID
-          };
-          return (await github.graphql(query, variables)).addProjectV2ItemById.item;
+          }
+        variables: |
+          projectId: ${{ inputs.project-id }}
+          contentId: ${{ inputs.issue-node-id }}

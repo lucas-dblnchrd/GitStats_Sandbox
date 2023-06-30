@@ -28,22 +28,18 @@ outputs:
             "optionId": "<option ID>"
         }
       }
-    value: ${{ steps.set-issue-status.outputs.result }}
+    value: ${{ toJSON(fromJSON(steps.set-issue-status.outputs.data).projectV2Item) }}
 runs:
   using: composite
   steps:
     - name: Set issue status
       id: set-issue-status
-      uses: actions/github-script@v6
+      uses: octokit/graphql-action@v2.x
       env:
-        PROJECT_ID: ${{ inputs.project-id }}
-        ITEM_ID: ${{ inputs.item-id }}
-        FIELD_ID: ${{ inputs.field-id }}
-        OPTION_ID: ${{ inputs.option-id }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const query = `mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+        query: |
+          mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
             updateProjectV2ItemFieldValue(input: {
               projectId: $projectId,
               itemId: $itemId,
@@ -62,11 +58,9 @@ runs:
                 }
               }
             }
-          }`;
-          const variables = {
-            projectId: process.env.PROJECT_ID,
-            itemId: process.env.ITEM_ID,
-            fieldId: process.env.FIELD_ID,
-            optionId: process.env.OPTION_ID
-          };
-          return await github.graphql(query, variables);
+          }
+        variables: |
+          projectId: ${{ inputs.project-id }}
+          itemId: ${{ inputs.item-id }}
+          fieldId: ${{ inputs.field-id }}
+          optionId: ${{ inputs.option-id }}
