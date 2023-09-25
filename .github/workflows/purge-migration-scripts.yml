@@ -25,15 +25,40 @@ jobs:
   purge_migration_scripts:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate an access token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
+          private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
+
+      - name: lookup team 1
+        run: |
+          echo "::group::lookup1"
+          gh api graphql -f query='{organization(login:"360Learning"){team(slug:"developer-experience"){slug,id}}}'
+          echo ""
+          echo "::endgroup::"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: lookup team 2
+        run: |
+          echo "::group::lookup2"
+          gh api graphql -f query='{organization(login:"360Learning"){team(slug:"developer-experience"){slug,id}}}'
+          echo ""
+          echo "::endgroup::"
+        env:
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+
       - uses: actions/checkout@v4
         with:
             ref: ${{ env.BASE }}
 
       - name: Delete old files
         run: |
-          date=$( date -d "$PURGE_DAYS days ago" +%Y%m%dT%H%M%SZ- )
+          limit=$( date -d "$PURGE_DAYS days ago" +%Y%m%dT%H%M%SZ- )
           for file in *; do
-            if [[ $file =~ $SCRIPT_PATTERN && $file < $LIMIT ]]; then
+            if [[ $file =~ $SCRIPT_PATTERN && $file < $limit ]]; then
               rm $file
             fi
           done
@@ -71,15 +96,15 @@ jobs:
       - name: Open Pull Request
         if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
         run: |
-          gh pr create \
+          GH_DEBUG=api gh pr create \
             --head $BRANCH_NAME \
             --base $BASE \
-            --label bot🤖
-            --reviewer 360Learning/developer-experience
+            --label bot🤖 \
+            --reviewer 360Learning/developer-experience \
             --title "chore(migrations): purge old migration scripts" \
             --body ":warning: This PR has been automatically created."
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Approve PR
         if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
