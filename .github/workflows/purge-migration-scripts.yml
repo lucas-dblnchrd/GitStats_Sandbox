@@ -1,0 +1,94 @@
+# This GitHub Action purges old migration scripts (files in packages/backend/zscripts/migrations).
+#
+#
+# This action triggers once a month.
+# It executes the following steps:
+# - create a new branch
+# - delete old scripts
+# - commit
+# - create a PR
+# - auto-merge it
+
+
+name: Purge migration scripts
+
+on:
+  workflow_dispatch:
+
+env:
+  BASE: master
+  BRANCH_NAME: purge-migrations-scripts/${{ github.run_id }}
+  PURGE_DAYS: ${{ 61 }}
+  SCRIPT_PATTERN: ^[0-9]{8}T[0-9]{6}Z-
+
+jobs:
+  purge_migration_scripts:
+    runs-on: k8s-runner
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            ref: ${{ env.BASE }}
+
+      - name: Delete old files
+        run: |
+          date=$( date -d "$PURGE_DAYS days ago" +%Y%m%dT%H%M%SZ- )
+          for file in *; do
+            if [[ $file =~ $SCRIPT_PATTERN && $file < $LIMIT ]]; then
+              rm $file
+            fi
+          done
+        working-directory: ${{ github.workspace }}/packages/backend/zscripts/migrations
+
+      - name: Check if there are changes to commit
+        id: check-changes-to-commit
+        run: |
+          if [[ -z $(git status -s) ]]
+          then
+            echo "no changes to commit"
+            echo "CHANGES_TO_COMMIT=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "CHANGES_TO_COMMIT=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create branch
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: git checkout -b ${{ env.BRANCH_NAME }}
+
+      - name: Commit changes
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Purge migration scripts older than $PURGE_DAYS days"
+
+      - name: Push branch
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: git push origin ${{ env.BRANCH_NAME }}
+
+      - name: Open Pull Request
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: |
+          gh pr create \
+            --head $BRANCH_NAME \
+            --base $BASE \
+            --label bot🤖
+            --reviewer 360Learning/developer-experience
+            --title "chore(migrations): purge old migration scripts" \
+            --body ":warning: This PR has been automatically created."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve PR
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: gh pr review --approve
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Activate automerge for Pull Request
+        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        run: gh pr merge --merge --auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
