@@ -23,7 +23,7 @@ env:
 
 jobs:
   purge_migration_scripts:
-    runs-on: k8s-runner
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
