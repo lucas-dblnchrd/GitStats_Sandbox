@@ -32,24 +32,6 @@ jobs:
           app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
           private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
 
-      - name: lookup team 1
-        run: |
-          echo "::group::lookup1"
-          gh api graphql -f query='{organization(login:"360Learning"){team(slug:"developer-experience"){slug,id}}}'
-          echo ""
-          echo "::endgroup::"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: lookup team 2
-        run: |
-          echo "::group::lookup2"
-          gh api graphql -f query='{organization(login:"360Learning"){team(slug:"developer-experience"){slug,id}}}'
-          echo ""
-          echo "::endgroup::"
-        env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-
       - uses: actions/checkout@v4
         with:
             ref: ${{ env.BASE }}
@@ -64,37 +46,14 @@ jobs:
           done
         working-directory: ${{ github.workspace }}/packages/backend/zscripts/migrations
 
-      - name: Check if there are changes to commit
-        id: check-changes-to-commit
-        run: |
-          if [[ -z $(git status -s) ]]
-          then
-            echo "no changes to commit"
-            echo "CHANGES_TO_COMMIT=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "CHANGES_TO_COMMIT=true" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create branch
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
-        run: git checkout -b ${{ env.BRANCH_NAME }}
-
-      - name: Commit changes
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add .
-          git commit -m "Purge migration scripts older than $PURGE_DAYS days"
-
-      - name: Push branch
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
-        run: git push origin ${{ env.BRANCH_NAME }}
+      - name: Commit in new branch
+        id: commit-in-branch
+        uses: ./.github/reusable-actions/commit-in-branch
+        with:
+          branch-name: ${{ env.BRANCH_NAME }}
 
       - name: Open Pull Request
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
         run: |
           GH_DEBUG=api gh pr create \
             --head $BRANCH_NAME \
@@ -107,13 +66,13 @@ jobs:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Approve PR
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
         run: gh pr review --approve
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Activate automerge for Pull Request
-        if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
+        if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
         run: gh pr merge --squash --auto
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,45 @@
+name: Create and push a new branch if there are local modifications
+inputs:
+  branch-name:
+    description: |
+      The name of the branch to create.
+      You can use `github.run_id` or `github.sha` to help creating unique names
+    required: true
+outputs:
+  created:
+    description: |
+      The string "true" or "false" to indicate if a branch was effectively created.
+      No branch will be created if there are no changes in your repository.
+    value: ${{ steps.check-changes-to-commit.outputs.result  }}
+runs:
+  using: composite
+  steps:
+    - name: Check if there are changes to commit
+      id: check-changes-to-commit
+      run: |
+        if [[ -z $(git status -s) ]]; then
+          echo "no changes to commit"
+          echo "result=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "result=true" >> "$GITHUB_OUTPUT"
+        fi
+      shell: bash
+
+    - name: Create branch
+      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      run: git checkout -b ${{ inputs.branch-name }}
+      shell: bash
+
+    - name: Commit changes
+      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add .
+        git commit -m "Purge migration scripts older than $PURGE_DAYS days"
+      shell: bash
+
+    - name: Push branch
+      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      run: git push origin ${{ inputs.branch-name }}
+      shell: bash
