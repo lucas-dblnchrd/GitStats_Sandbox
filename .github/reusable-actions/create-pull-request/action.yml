@@ -1,0 +1,62 @@
+name: Create a new pull request
+inputs:
+  head:
+    description: The name of the branch to merge
+    required: true
+  base:
+    description: The name of the base branch to merge into
+    required: true
+  title:
+    description: The title of the pull request
+    required: true
+  body:
+    description: The description of the pull request
+    required: true
+  reviewers:
+    description: An array of reviewers to add
+    required: false
+  auto-merge:
+    description: A boolean ('true' or 'false') indicating if the new PR should be approved and merged
+    required: true
+    default: false
+  github-token:
+    description: |
+      The GitHub token used to *create* the PR.
+      If `auto-merge` is true, the PR will then be merged with the standard GitHub token,
+      because it's forbidden to approve your own PRs.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Open Pull Request
+      run: |
+        reviewers=$( echo "$REVIEWERS" | jq -r 'map("--reviewer " + .) | join(" ")' )
+        body=$( echo -e "$BODY_PROLOG\n\n$BODY" )
+        gh pr create \
+          --head ${{ inputs.head }} \
+          --base ${{ inputs.base }} \
+          --label bot🤖 \
+          $reviewers \
+          --title "$TITLE" \
+          --body "$body"
+      shell: bash
+      env:
+        TITLE: ${{ inputs.title }}
+        BODY_PROLOG: "*:warning: This PR has been automatically created.*"
+        BODY: ${{ inputs.body }}
+        REVIEWERS: ${{ inputs.reviewers }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Approve PR
+      if: inputs.auto-merge == 'true'
+      run: gh pr review --approve
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Activate automerge for Pull Request
+      if: inputs.auto-merge == 'true'
+      run: gh pr merge --squash --auto
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}

@@ -3,7 +3,10 @@ inputs:
   branch-name:
     description: |
       The name of the branch to create.
-      You can use `github.run_id` or `github.sha` to help creating unique names
+      You can use `github.run_id` or `github.sha` to ease unique names creation
+    required: true
+  commit-message:
+    description: The message to set on the commit that will be created
     required: true
 outputs:
   created:
@@ -26,20 +29,22 @@ runs:
       shell: bash
 
     - name: Create branch
-      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      if: steps.check-changes-to-commit.outputs.result == 'true'
       run: git checkout -b ${{ inputs.branch-name }}
       shell: bash
 
     - name: Commit changes
-      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      if: steps.check-changes-to-commit.outputs.result == 'true'
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add .
-        git commit -m "Purge migration scripts older than $PURGE_DAYS days"
+        git commit -m "$COMMIT_MESSAGE"
       shell: bash
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
 
     - name: Push branch
-      if: ${{ steps.check-changes-to-commit.outputs.result == 'true' }}
+      if: steps.check-changes-to-commit.outputs.result == 'true'
       run: git push origin ${{ inputs.branch-name }}
       shell: bash

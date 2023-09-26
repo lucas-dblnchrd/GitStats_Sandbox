@@ -18,8 +18,7 @@ on:
 env:
   BASE: master
   BRANCH_NAME: purge-migrations-scripts/${{ github.run_id }}
-  PURGE_DAYS: ${{ 61 }}
-  SCRIPT_PATTERN: ^[0-9]{8}T[0-9]{6}Z-
+  PURGE_DAYS: 61
 
 jobs:
   purge_migration_scripts:
@@ -39,8 +38,9 @@ jobs:
       - name: Delete old files
         run: |
           limit=$( date -d "$PURGE_DAYS days ago" +%Y%m%dT%H%M%SZ- )
+          pattern="^[0-9]{8}T[0-9]{6}Z-"
           for file in *; do
-            if [[ $file =~ $SCRIPT_PATTERN && $file < $limit ]]; then
+            if [[ $file =~ $pattern && $file < $limit ]]; then
               rm $file
             fi
           done
@@ -51,28 +51,20 @@ jobs:
         uses: ./.github/reusable-actions/commit-in-branch
         with:
           branch-name: ${{ env.BRANCH_NAME }}
+          commit-message: |
+            Purge migration
+            scripts older than ${{ env.PURGE_DAYS }} days
+            escaping $( echo special ) metacharacters
+            for the shell...
 
-      - name: Open Pull Request
+      - name: Create pull request
         if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
-        run: |
-          GH_DEBUG=api gh pr create \
-            --head $BRANCH_NAME \
-            --base $BASE \
-            --label bot🤖 \
-            --reviewer 360Learning/developer-experience \
-            --title "chore(migrations): purge old migration scripts" \
-            --body ":warning: This PR has been automatically created."
-        env:
-          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
-
-      - name: Approve PR
-        if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
-        run: gh pr review --approve
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Activate automerge for Pull Request
-        if: ${{ steps.commit-in-branch.outputs.created == 'true' }}
-        run: gh pr merge --squash --auto
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: ${{ env.BRANCH_NAME }}
+          base: ${{ env.BASE }}
+          title: "chore(migrations): purge old migration scripts"
+          body: "Purging migrations scripts older than ${{ env.PURGE_DAYS }} days from `packages/backend/zscripts/migrations`"
+          reviewers: '["LucVidal360"]'
+          auto-merge: true
+          github-token: ${{ steps.generate_token.outputs.token }}
