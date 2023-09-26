@@ -114,6 +114,6 @@ jobs:
 
       - name: Activate automerge for Pull Request
         if: ${{ steps.check-changes-to-commit.outputs.CHANGES_TO_COMMIT == 'true' }}
-        run: gh pr merge --merge --auto
+        run: gh pr merge --squash --auto
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
