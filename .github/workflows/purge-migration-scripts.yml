@@ -64,7 +64,24 @@ jobs:
           head: ${{ env.BRANCH_NAME }}
           base: ${{ env.BASE }}
           title: "chore(migrations): purge old migration scripts"
-          body: "Purging migrations scripts older than ${{ env.PURGE_DAYS }} days from `packages/backend/zscripts/migrations`"
+          body: |
+            ### Manual
+            - Code Owners' reviews are not required.
+            - The PR will be auto-merged by the bot.
+            - If there is a merge conflict,
+              - Check if it comes from a previous Gitflow PR and if someone already handled it.
+                https://github.com/360Learning/platform/pulls?q=is%3Apr+is%3Aopen+in%3Atitle+chore%28gitflow%29%3A
+                No need to handle the merge conflict twice. Once the other PR is merged, it will unblock this PR.
+              - If it comes from this PR, @${{ github.actor }} handles it
+                ```
+                git checkout ${{ env.BASE }}
+                git pull
+                git checkout ${{ env.BRANCH_NAME }}
+                git merge ${{ env.BASE }}
+                # handle the merge conflict
+                git push
+                ```
+            - If there is a pipeline error, @${{ github.actor }} fixes it on `${{ env.BRANCH_NAME }}`.
           reviewers: '["LucVidal360"]'
-          auto-merge: true
+          auto-merge: false
           github-token: ${{ steps.generate_token.outputs.token }}
