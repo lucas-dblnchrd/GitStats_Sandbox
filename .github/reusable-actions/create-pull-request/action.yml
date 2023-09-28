@@ -23,12 +23,33 @@ inputs:
     description: |
       The GitHub token used to *create* the PR.
       If `auto-merge` is true, the PR will then be merged with the standard GitHub token,
-      because it's forbidden to approve your own PRs.
+      because it's forbidden to approve your own PRs!
     required: true
 runs:
   using: composite
   steps:
+    - name: Check branches
+      id: check-branches
+      run: |
+        if ! headCommit=$( git rev-parse ${{ inputs.head }} ); then
+          echo "::warning::The branch ${{ inputs.head }} doesn't exist"
+          echo "result=false" >> "$GITHUB_OUTPUT"
+          exit
+        fi
+        if ! baseCommit=$( git rev-parse ${{ inputs.base }} ); then
+          echo "::warning::The branch ${{ inputs.base }} doesn't exist"
+          echo "result=false" >> "$GITHUB_OUTPUT"
+          exit
+        fi
+        if [[ $headCommit = $baseCommit ]]; then
+          echo "::warning::The branches ${{ inputs.head }} and ${{ inputs.head }} point to the same commit"
+          echo "result=false" >> "$GITHUB_OUTPUT"
+          exit
+        fi
+        echo "result=true" >> "$GITHUB_OUTPUT"
+
     - name: Open Pull Request
+      if: steps.check-branches.outputs.result == 'true'
       run: |
         reviewers=$( echo "$REVIEWERS" | jq -r 'map("--reviewer " + .) | join(" ")' )
         body=$( echo -e "$BODY_PROLOG\n\n$BODY" )
@@ -42,20 +63,20 @@ runs:
       shell: bash
       env:
         TITLE: ${{ inputs.title }}
-        BODY_PROLOG: "*:warning: This PR has been automatically created.*"
+        BODY_PROLOG: "*:warning: This PR has been automatically created. :warning:*"
         BODY: ${{ inputs.body }}
         REVIEWERS: ${{ inputs.reviewers }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
 
     - name: Approve PR
-      if: inputs.auto-merge == 'true'
+      if: steps.check-branches.outputs.result == 'true' && inputs.auto-merge == 'true'
       run: gh pr review --approve
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
     - name: Activate automerge for Pull Request
-      if: inputs.auto-merge == 'true'
+      if: steps.check-branches.outputs.result == 'true' && inputs.auto-merge == 'true'
       run: gh pr merge --squash --auto
       shell: bash
       env:
