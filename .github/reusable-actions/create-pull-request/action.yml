@@ -42,11 +42,12 @@ runs:
           exit
         fi
         if [[ $headCommit = $baseCommit ]]; then
-          echo "::warning::The branches ${{ inputs.head }} and ${{ inputs.head }} point to the same commit"
+          echo "::warning::The branches ${{ inputs.head }} and ${{ inputs.base }} point to the same commit"
           echo "result=false" >> "$GITHUB_OUTPUT"
           exit
         fi
         echo "result=true" >> "$GITHUB_OUTPUT"
+      shell: bash
 
     - name: Open Pull Request
       if: steps.check-branches.outputs.result == 'true'

@@ -1,0 +1,83 @@
+name: Test create pull request
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_create_pull_request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate an access token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
+          private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
+
+      - uses: actions/checkout@v4
+        with:
+            ref: master
+
+      - name: Create branches
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -b test-create-pull-request-empty
+          git push -f origin test-create-pull-request-empty
+          git checkout -b test-create-pull-request-full
+          echo $( date ) >> create_pull_request.txt
+          git add create_pull_request.txt
+          git commit -m 'test-create-pull-request-full'
+          git push -f origin test-create-pull-request-full
+
+      - name: Create pull request unknow
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: test-create-pull-request-unknow
+          base: master
+          title: test-create-pull-request-unknow
+          body: test-create-pull-request-unknow
+          auto-merge: false
+          github-token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Create pull request unknow 2
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: test-create-pull-request-full
+          base: test-create-pull-request-unknown
+          title: test-create-pull-request-unknow-2
+          body: test-create-pull-request-unknow-2
+          auto-merge: false
+          github-token: ${{ steps.generate_token.outputs.token }}
+  
+      - name: Create pull request empty
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: test-create-pull-request-empty
+          base: master
+          title: test-create-pull-request-empty
+          body: test-create-pull-request-empty
+          auto-merge: false
+          github-token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Create pull request full
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: test-create-pull-request-full
+          base: master
+          title: test-create-pull-request-full
+          body: test-create-pull-request-full
+          auto-merge: false
+          github-token: ${{ steps.generate_token.outputs.token }}
+  
+      - name: Create pull request inverted
+        uses: ./.github/reusable-actions/create-pull-request
+        with:
+          head: master
+          base: test-create-pull-request-full
+          title: test-create-pull-request-inverted
+          body: test-create-pull-request-inverted
+          auto-merge: false
+          github-token: ${{ steps.generate_token.outputs.token }}
+
+  
