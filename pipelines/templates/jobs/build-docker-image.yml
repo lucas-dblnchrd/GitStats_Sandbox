@@ -37,13 +37,13 @@ jobs:
         displayName: Login to ACR
         inputs:
           command: login
-          containerRegistry: $(containerRegistry)
+          containerRegistry: ${{ variables.containerRegistry }}
 
       - task: Docker@2
         displayName: Push api
         inputs:
           command: push
-          containerRegistry: $(containerRegistry)
+          containerRegistry: ${{ variables.containerRegistry }}
           repository: $(targetImage)
           tags: |
             $(imageTag1)
