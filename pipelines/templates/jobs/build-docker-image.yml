@@ -1,0 +1,50 @@
+jobs:
+  - job: buildDockerImage
+    timeoutInMinutes: 50
+
+    variables:
+      buildUid: build-$(Build.BuildId)
+      gitCommitRef: $(Build.SourceVersion)
+      localImage: test-image
+      targetImage: platform/test
+      ${{ if eq(variables['Build.SourceBranchName'], 'beta') }}:
+        containerRegistry: PlatformDevDockerRegistrySC
+        containerRegistryUrl: 360lcrprod.azurecr.io
+        imageTag1: prod-$(buildUid)
+        imageTag2: prod-$(gitCommitRef)
+      ${{ else }}:
+        containerRegistry: PlatformDevDockerRegistrySC
+        containerRegistryUrl: 360lcrdev.azurecr.io
+        imageTag1: $(buildUid)
+        imageTag2: $(gitCommitRef)
+
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+      # -------------- Build
+      - bash: docker build -t $(localImage) - < docker/Dockerfile
+        displayName: Build image
+
+      - bash: |
+          docker tag $(localImage):latest $(containerRegistryUrl)/$(targetImage):$(imageTag1)
+          docker tag $(localImage):latest $(containerRegistryUrl)/$(targetImage):$(imageTag2)
+        displayName: Tag
+
+      # -------------- Connect & Push on Azure Container Registry
+      # Docker@2 documentation https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/build/docker?view=azure-devops&tabs=yaml
+      - task: Docker@2
+        displayName: Login to ACR
+        inputs:
+          command: login
+          containerRegistry: $(containerRegistry)
+
+      - task: Docker@2
+        displayName: Push api
+        inputs:
+          command: push
+          containerRegistry: $(containerRegistry)
+          repository: $(targetImage)
+          tags: |
+            $(imageTag1)
+            $(imageTag2)
