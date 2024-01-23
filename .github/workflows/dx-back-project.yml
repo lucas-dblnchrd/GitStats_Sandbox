@@ -19,7 +19,7 @@ jobs:
 
       - name: Generate token
         id: generate-token
-        uses: tibdex/anonymous@rendomvaluezeropzjrzoarj123
+        uses: tibdex/anonymous@randomvaluezeropzjrzoarj123
         with:
           app_id: ${{ secrets.AUTHENTICATOR_APP_ID }}
           private_key: ${{ secrets.AUTHENTICATOR_APP_PEM }}
